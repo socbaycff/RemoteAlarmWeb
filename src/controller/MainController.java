@@ -3,12 +3,19 @@ package controller;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.EventListener;
 import com.google.cloud.firestore.FirestoreException;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
@@ -22,8 +29,13 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 
+import model.Alarm;
+/*
+ * Pham vi chi tuong tac voi thuoc tinh hour minute title started
+ * */
 @Controller
 public class MainController {
+	String token = "c5B2RNdBv3Y:APA91bHiNXvWURWFWc0rpag39ZmpPE4MLNXGwqzMsVuAYuPLzKC9lCrBgWEZGpxNrh8l97MKmIjBdV4eTa20fRxBo4bohKRXWJj-li9GTQHwQ9mzdQ2ugEoSvvmcuvj4Cb9X1qfjCwPJ";
 	public static boolean isInit = false;
 	public static void init() throws IOException {
 		isInit = true;
@@ -39,27 +51,58 @@ public class MainController {
 	
 	@RequestMapping("index")
 	public String index() throws FirebaseMessagingException, IOException {
-
-//		String token = "dsy2Bd_3IPg:APA91bFr6OJmJ7m_DM4WIK6V70E-zgZhxTvI85c6kL4hOt3zFsVhwOqd4ZvfnPbmzwtS-rlKY8sTgTz3hsb8TSu3nWTfpGcyXXgaldFl7bl8siCF7DasL2DqrbTyhZaJ4HaTfrcDVkaA";
-//		Message mess = Message.builder().putData("hour", "9").putData("minute", "9").setToken(token)
-//				.putData("title", "Noi dung").build();
-		if (!isInit) {
+		if (!isInit) { // lk db firebase
 			init();
 		}
-//		FirebaseMessaging.getInstance().send(mess);
-		FirestoreClient.getFirestore().collection("alarms").addSnapshotListener(new EventListener<QuerySnapshot>() {
-			
-			@Override
-			public void onEvent(QuerySnapshot value, FirestoreException error) {
-				List<QueryDocumentSnapshot> documents = value.getDocuments();
-				for (QueryDocumentSnapshot doc : documents) {
-					String string = String.valueOf(doc.get("alarmId"));
-					System.out.println(string);
-				}
-				
-			}
-		});
+		
+		// demo
+		//FirestoreClient.getFirestore().collection("alarms").document("1101434745").update("started", true);
+		
 		return "index";
+	}
+	
+	@RequestMapping("new")
+	public String newAlarm(@RequestParam("time") String strTime,@RequestParam("title") String title) throws FirebaseMessagingException {
+		System.out.println("Da vao trong new mapping new");
+		int id = new Random().nextInt(Integer.MAX_VALUE);
+		// gui tin hieu den mobile new moi
+		
+		Message mess = Message.builder().putData("alarmId", String.valueOf(id)).putData("type", "insert").putData("hour", strTime.substring(0, 2)).putData("minute", strTime.substring(3, 5)).setToken(token)
+				.putData("title", title).build();
+		FirebaseMessaging.getInstance().send(mess);
+		// add vao trong firestore
+		
+		Alarm alarm = new Alarm(id, Integer.parseInt(strTime.substring(0, 2)), Integer.parseInt(strTime.substring(3, 5)), title, System.currentTimeMillis(), true);
+		FirestoreClient.getFirestore().collection("alarms").document(String.valueOf(id)).set(alarm);
+		return "redirect:/index.htm";
+	}
+	@RequestMapping("cancel/{alarmId}")
+	public String cancelAlarm(@PathVariable("alarmId") String id) throws FirebaseMessagingException {
+		System.out.println("Da vao trong new mapping cancel");
+		// gui message den mobile cancel
+		Message mess = Message.builder().putData("type", "cancel").putData("alarmId", id).setToken(token).build();
+		FirebaseMessaging.getInstance().send(mess);
+		//update firestore started = false
+		FirestoreClient.getFirestore().collection("alarms").document(id).delete();
+		return "redirect:/index.htm";
+	}
+	@RequestMapping(value = "update", method = RequestMethod.POST)
+	public String updateAlarm(@RequestParam("time") String strTime, @RequestParam("title") String title, @RequestParam(value = "aid", defaultValue = "id") String id) throws FirebaseMessagingException {
+		System.out.println("Da vao trong new mapping update");
+		System.out.println(id);
+		// gui delete + new moi den mobile
+		Message mess = Message.builder().putData("type", "update").putData("alarmId", id).putData("hour",strTime.substring(0, 2)).putData("minute", strTime.substring(3, 5)).setToken(token)
+				.putData("title", title).build();
+		FirebaseMessaging.getInstance().send(mess);
+		// update gia tri firestore
+		DocumentReference reference = FirestoreClient.getFirestore().collection("alarms").document(id);
+		Map<String,Object> map = new HashMap<>();
+		map.put("hour",Integer.parseInt(strTime.substring(0, 2)));
+		map.put("minute",Integer.parseInt(strTime.substring(3, 5)));
+		map.put("title", title);
+		map.put("started", true);
+		reference.update(map);
+		return "redirect:/index.htm";
 	}
 	
 	
