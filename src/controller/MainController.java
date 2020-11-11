@@ -35,7 +35,7 @@ import model.Alarm;
  * */
 @Controller
 public class MainController {
-	String token = "c5B2RNdBv3Y:APA91bHiNXvWURWFWc0rpag39ZmpPE4MLNXGwqzMsVuAYuPLzKC9lCrBgWEZGpxNrh8l97MKmIjBdV4eTa20fRxBo4bohKRXWJj-li9GTQHwQ9mzdQ2ugEoSvvmcuvj4Cb9X1qfjCwPJ";
+	String token = "dCo4K1UUVUI:APA91bFo96cq0IqmIldJAYwuyCrCE8rhjcVMxco7QzEDh9Akhk3OdO0I10HlDpDQL06vNFNME7NvZc44_DaCbJmNZy3O3L0HRakhv7VC8LwWM4qFEhcMKSAx67xprCigLbwpgGPWCyRR";
 	public static boolean isInit = false;
 	public static void init() throws IOException {
 		isInit = true;
